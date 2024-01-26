@@ -15,8 +15,5 @@
 #![doc = include_str!("../README.md")]
 #![no_std]
 
-pub mod bench;
-pub mod multi_test;
-
 #[cfg(not(target_os = "zkvm"))]
 include!(concat!(env!("OUT_DIR"), "/methods.rs"));

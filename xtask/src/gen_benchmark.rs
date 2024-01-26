@@ -12,10 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod benchmark;
-#[cfg(feature = "experimental")]
-pub mod build;
-pub mod build_guest;
-pub mod build_toolchain;
-pub mod install;
-pub mod new;
+use clap::Parser;
+use risc0_zkvm_methods::BENCH_ELF;
+
+#[derive(Parser)]
+pub struct GenBenchmark {
+    /// Path to the benchmark_elf.rs file.
+    #[arg(short, long, default_value_t = String::from("risc0/cargo-risczero/src/benchmark_elf.rs"))]
+    pub path: String,
+}
+
+impl GenBenchmark {
+    pub fn run(&self) {
+        std::fs::write(&self.path, BENCH_ELF).unwrap();
+    }
+}

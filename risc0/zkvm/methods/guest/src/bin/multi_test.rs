@@ -29,7 +29,7 @@ use risc0_zkvm::{
     sha::{Digest, Sha256},
     ReceiptClaim,
 };
-use risc0_zkvm_methods::multi_test::{MultiTestSpec, SYS_MULTI_TEST};
+use risc0_zkvm_methods_core::multi_test::{MultiTestSpec, SYS_MULTI_TEST};
 use risc0_zkvm_platform::{
     fileno,
     memory::{self, SYSTEM},
@@ -151,7 +151,7 @@ fn main() {
                 for alignment in 0..=usize::min(3, size) {
                     let rand_buf = &mut vec![0u8; size][alignment..];
                     getrandom(rand_buf).expect("random number generation failed");
-                    env::commit_slice(&rand_buf);
+                    env::commit_slice(rand_buf);
 
                     // If we generated more than 2 bytes, make sure that they are at least not zero.
                     // Only check for len > 2 to avoid false positives.

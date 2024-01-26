@@ -27,7 +27,8 @@ use clap::{Parser, Subcommand};
 #[cfg(feature = "experimental")]
 use self::commands::build::BuildCommand;
 use self::commands::{
-    build_guest::BuildGuest, build_toolchain::BuildToolchain, install::Install, new::NewCommand,
+    benchmark::BenchmarkCommand, build_guest::BuildGuest, build_toolchain::BuildToolchain,
+    install::Install, new::NewCommand,
 };
 
 #[derive(Parser)]
@@ -58,6 +59,8 @@ pub enum RisczeroCmd {
     Install(Install),
     /// Creates a new risczero starter project.
     New(NewCommand),
+    /// Prove a zkvm program locally and report performance statistics.
+    Benchmark(BenchmarkCommand),
     /// Build a crate for RISC Zero.
     #[cfg(feature = "experimental")]
     BuildCrate(BuildCommand),

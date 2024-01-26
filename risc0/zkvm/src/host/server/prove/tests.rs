@@ -21,7 +21,8 @@ use risc0_zkp::{
     hal::cpu::CpuHal,
     verify::VerificationError,
 };
-use risc0_zkvm_methods::{multi_test::MultiTestSpec, MULTI_TEST_ELF, MULTI_TEST_ID};
+use risc0_zkvm_methods::{MULTI_TEST_ELF, MULTI_TEST_ID};
+use risc0_zkvm_methods_core::multi_test::MultiTestSpec;
 use risc0_zkvm_platform::{memory, WORD_SIZE};
 use serial_test::serial;
 use test_log::test;
@@ -385,7 +386,8 @@ mod riscv {
 
 #[cfg(feature = "docker")]
 mod docker {
-    use risc0_zkvm_methods::{multi_test::MultiTestSpec, MULTI_TEST_ELF};
+    use risc0_zkvm_methods::MULTI_TEST_ELF;
+    use risc0_zkvm_methods_core::multi_test::MultiTestSpec;
     use test_log::test;
 
     use super::prove_session_fast;
@@ -457,9 +459,8 @@ mod docker {
 }
 
 mod sys_verify {
-    use risc0_zkvm_methods::{
-        multi_test::MultiTestSpec, HELLO_COMMIT_ELF, HELLO_COMMIT_ID, MULTI_TEST_ELF, MULTI_TEST_ID,
-    };
+    use risc0_zkvm_methods::{HELLO_COMMIT_ELF, HELLO_COMMIT_ID, MULTI_TEST_ELF, MULTI_TEST_ID};
+    use risc0_zkvm_methods_core::multi_test::MultiTestSpec;
     use test_log::test;
 
     use super::{get_prover_server, prover_opts_fast};
