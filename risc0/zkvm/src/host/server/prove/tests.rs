@@ -24,7 +24,6 @@ use risc0_zkp::{
 };
 use risc0_zkvm_methods::{multi_test::MultiTestSpec, MULTI_TEST_ELF, MULTI_TEST_ID};
 use risc0_zkvm_platform::{memory, PAGE_SIZE, WORD_SIZE};
-use serial_test::serial;
 use test_log::test;
 
 use super::{get_prover_server, HalPair, ProverImpl};
@@ -64,7 +63,6 @@ fn prove_nothing(hashfn: &str) -> Result<ProveInfo> {
 }
 
 #[test]
-#[cfg_attr(feature = "cuda", serial)]
 fn hashfn_poseidon2() {
     prove_nothing("poseidon2").unwrap();
 }
@@ -85,7 +83,6 @@ fn hashfn_blake2b() {
 }
 
 #[test]
-#[cfg_attr(feature = "cuda", serial)]
 fn receipt_serde() {
     let receipt = prove_nothing("sha-256").unwrap().receipt;
     let encoded: Vec<u32> = to_vec(&receipt).unwrap();
@@ -95,7 +92,6 @@ fn receipt_serde() {
 }
 
 #[test]
-#[cfg_attr(feature = "cuda", serial)]
 fn check_image_id() {
     let receipt = prove_nothing("sha-256").unwrap().receipt;
     let mut image_id: Digest = MULTI_TEST_ID.into();
@@ -109,7 +105,6 @@ fn check_image_id() {
 }
 
 #[test]
-#[serial]
 fn sha_basics() {
     fn run_sha(msg: &str) -> String {
         let env = ExecutorEnv::builder()
@@ -142,7 +137,6 @@ fn sha_basics() {
 }
 
 #[test]
-#[serial]
 fn sha_iter() {
     let input = MultiTestSpec::ShaDigestIter {
         data: Vec::from([0u8; 32]),
@@ -189,7 +183,6 @@ fn bigint_accel() {
 }
 
 #[test]
-#[serial]
 fn memory_io() {
     fn run_memio(pairs: &[(usize, usize)]) -> Result<ExitCode> {
         let input = MultiTestSpec::ReadWriteMem {
@@ -324,7 +317,6 @@ mod riscv {
     macro_rules! test_case {
         ($func_name:ident) => {
             #[test_log::test]
-            #[cfg_attr(feature = "cuda", serial_test::serial)]
             fn $func_name() {
                 run_test(stringify!($func_name));
             }
@@ -490,6 +482,8 @@ fn stark2snark() {
 }
 
 mod sys_verify {
+    use std::sync::OnceLock;
+
     use risc0_zkvm_methods::{
         multi_test::MultiTestSpec, HELLO_COMMIT_ELF, HELLO_COMMIT_ID, MULTI_TEST_ELF, MULTI_TEST_ID,
     };
@@ -502,15 +496,11 @@ mod sys_verify {
     };
 
     fn prove_hello_commit() -> Receipt {
-        let hello_commit_receipt = get_prover_server(&prover_opts_fast())
+        get_prover_server(&prover_opts_fast())
             .unwrap()
             .prove(ExecutorEnv::default(), HELLO_COMMIT_ELF)
             .unwrap()
-            .receipt;
-
-        // Double check that the receipt verifies.
-        hello_commit_receipt.verify(HELLO_COMMIT_ID).unwrap();
-        hello_commit_receipt
+            .receipt
     }
 
     fn prove_halt(exit_code: u8) -> Receipt {
@@ -540,15 +530,16 @@ mod sys_verify {
         halt_receipt
     }
 
-    lazy_static::lazy_static! {
-        static ref HELLO_COMMIT_RECEIPT: Receipt = prove_hello_commit();
+    fn hello_commit_receipt() -> &'static Receipt {
+        static ONCE: OnceLock<Receipt> = OnceLock::new();
+        ONCE.get_or_init(|| prove_hello_commit())
     }
 
     #[test]
     fn sys_verify_1() {
         let spec = MultiTestSpec::SysVerify(vec![(
             HELLO_COMMIT_ID.into(),
-            HELLO_COMMIT_RECEIPT.journal.bytes.clone(),
+            hello_commit_receipt().journal.bytes.clone(),
         )]);
 
         // Test that providing the proven assumption results in an unconditional
@@ -556,7 +547,7 @@ mod sys_verify {
         let env = ExecutorEnv::builder()
             .write(&spec)
             .unwrap()
-            .add_assumption(HELLO_COMMIT_RECEIPT.clone())
+            .add_assumption(hello_commit_receipt().clone())
             .build()
             .unwrap();
         get_prover_server(&prover_opts_fast())
@@ -572,7 +563,7 @@ mod sys_verify {
     fn sys_verify_2() {
         let spec = MultiTestSpec::SysVerify(vec![(
             HELLO_COMMIT_ID.into(),
-            HELLO_COMMIT_RECEIPT.journal.bytes.clone(),
+            hello_commit_receipt().journal.bytes.clone(),
         )]);
 
         // Test that proving without a provided assumption results in an execution
@@ -592,7 +583,7 @@ mod sys_verify {
     fn sys_verify_3() {
         let spec = MultiTestSpec::SysVerify(vec![(
             HELLO_COMMIT_ID.into(),
-            HELLO_COMMIT_RECEIPT.journal.bytes.clone(),
+            hello_commit_receipt().journal.bytes.clone(),
         )]);
 
         // Test that providing an unresolved assumption results in a conditional
@@ -600,7 +591,7 @@ mod sys_verify {
         let env = ExecutorEnv::builder()
             .write(&spec)
             .unwrap()
-            .add_assumption(HELLO_COMMIT_RECEIPT.get_claim().unwrap())
+            .add_assumption(hello_commit_receipt().get_claim().unwrap())
             .build()
             .unwrap();
 
@@ -620,7 +611,7 @@ mod sys_verify {
     #[test]
     fn sys_verify_integrity() {
         let spec = &MultiTestSpec::SysVerifyIntegrity {
-            claim_words: to_vec(&HELLO_COMMIT_RECEIPT.get_claim().unwrap()).unwrap(),
+            claim_words: to_vec(&hello_commit_receipt().get_claim().unwrap()).unwrap(),
         };
 
         // Test that providing the proven assumption results in an unconditional
@@ -628,7 +619,7 @@ mod sys_verify {
         let env = ExecutorEnv::builder()
             .write(&spec)
             .unwrap()
-            .add_assumption(HELLO_COMMIT_RECEIPT.clone())
+            .add_assumption(hello_commit_receipt().clone())
             .build()
             .unwrap();
         get_prover_server(&prover_opts_fast())
@@ -656,7 +647,7 @@ mod sys_verify {
         let env = ExecutorEnv::builder()
             .write(&spec)
             .unwrap()
-            .add_assumption(HELLO_COMMIT_RECEIPT.get_claim().unwrap())
+            .add_assumption(hello_commit_receipt().get_claim().unwrap())
             .build()
             .unwrap();
         // TODO(#982) Conditional receipts currently return an error on verification.
