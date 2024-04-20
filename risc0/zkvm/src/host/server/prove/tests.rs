@@ -29,6 +29,7 @@ use test_log::test;
 
 use super::{get_prover_server, HalPair, ProverImpl};
 use crate::{
+    default_prover,
     host::server::testutils,
     serde::{from_slice, to_vec},
     ExecutorEnv, ExecutorImpl, ExitCode, ProveInfo, ProverOpts, ProverServer, Receipt, Session,
@@ -61,6 +62,18 @@ fn prove_nothing(hashfn: &str) -> Result<ProveInfo> {
         prove_guest_errors: false,
     };
     get_prover_server(&opts).unwrap().prove(env, MULTI_TEST_ELF)
+}
+
+#[test]
+#[cfg_attr(feature = "cuda", serial)]
+fn prove_no_ram() {
+    let env = ExecutorEnv::builder()
+        .write(&MultiTestSpec::DoNothing)
+        .unwrap()
+        .segment_limit_ram_storage(0)
+        .build()
+        .unwrap();
+    default_prover().prove(env, MULTI_TEST_ELF).unwrap();
 }
 
 #[test]

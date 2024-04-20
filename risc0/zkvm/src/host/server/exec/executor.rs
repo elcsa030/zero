@@ -30,7 +30,7 @@ use tempfile::tempdir;
 
 use crate::{
     host::client::env::SegmentPath, Assumption, Assumptions, ExecutorEnv, FileSegmentRef, Output,
-    Segment, SegmentRef, Session,
+    Segment, SegmentRef, Session, SimpleSegmentRef,
 };
 
 use super::{
@@ -108,12 +108,24 @@ impl<'a> ExecutorImpl<'a> {
     /// This will run the executor to get a [Session] which contain the results
     /// of the execution.
     pub fn run(&mut self) -> Result<Session> {
+        let ram_segment_limit: u32 = self
+            .env
+            .segment_limit_ram_storage
+            .unwrap_or(DEFAULT_SEGMENT_RAM_STORAGE_LIMIT);
+
         if self.env.segment_path.is_none() {
             self.env.segment_path = Some(SegmentPath::TempDir(Arc::new(tempdir()?)));
         }
 
         let path = self.env.segment_path.clone().unwrap();
-        self.run_with_callback(|segment| Ok(Box::new(FileSegmentRef::new(&segment, &path)?)))
+        self.run_with_callback(|segment| {
+            if segment.index < ram_segment_limit {
+                Ok(Box::new(SimpleSegmentRef::new(segment)))
+            } else {
+                // After creating more than the limit, store it in files to save RAM.
+                Ok(Box::new(FileSegmentRef::new(&segment, &path)?))
+            }
+        })
     }
 
     /// Run the executor until [crate::ExitCode::Halted] or

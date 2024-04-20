@@ -437,6 +437,7 @@ impl Client {
                     })
                 })
                 .collect::<Result<_>>()?,
+            segment_limit_ram_storage: env.segment_limit_ram_storage,
         })
     }
 
